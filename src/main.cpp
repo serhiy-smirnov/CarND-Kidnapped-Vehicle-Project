@@ -100,7 +100,7 @@ int main() {
           std::istream_iterator<float>(),
           std::back_inserter(y_sense));
 
-          for (int i = 0; i < x_sense.size(); ++i) {
+          for (size_t i = 0; i < x_sense.size(); ++i) {
             LandmarkObs obs;
             obs.x = x_sense[i];
             obs.y = y_sense[i];
@@ -110,6 +110,7 @@ int main() {
           // Update the weights and resample
           pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
           pf.resample();
+          //std::cout << "pf.best_particle_index=" << pf.best_particle_index << std::endl;
 
           // Calculate and output the average weighted error of the particle 
           //   filter over all time steps so far.
@@ -122,13 +123,14 @@ int main() {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
               best_particle = particles[i];
+              //std::cout << "Best particle #" << i << " x=" << particles[i].x << " y=" << particles[i].y << std::endl;
             }
 
             weight_sum += particles[i].weight;
           }
 
-          std::cout << "highest w " << highest_weight << std::endl;
-          std::cout << "average w " << weight_sum/num_particles << std::endl;
+          //std::cout << "highest w " << highest_weight << std::endl;
+          //std::cout << "average w " << weight_sum/num_particles << std::endl;
 
           json msgJson;
           msgJson["best_particle_x"] = best_particle.x;
