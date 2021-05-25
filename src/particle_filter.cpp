@@ -35,7 +35,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   
   //std::cout << "ParticleFilter::init()" << std::endl;
 
-  num_particles = 9;  // TODO: Set the number of particles
+  num_particles = 100;  // TODO: Set the number of particles
 
   // Normal (Gaussian) distribution for x, y and theta using corresponding standard deviations
   normal_distribution<double> dist_x(x, std[0]);
@@ -151,7 +151,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    */
   
   //std::cout << "ParticleFilter::updateWeights()" << std::endl;
-  
+
   double total_weight = 0;
 
   for(int i = 0; i < num_particles; i++)
@@ -165,6 +165,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     particles[i].associations.resize(0);
     particles[i].sense_x.resize(0);
     particles[i].sense_y.resize(0);
+  
+    std::vector<Map::single_landmark_s> nearest_landmarks; // List of landmarks in the map
+    for(size_t k = 0; k < map_landmarks.landmark_list.size(); k++)
+    {
+      // Consider only the landmarks which are located in the range of the sensor from the current particle
+      double particle_to_landmark_distance = dist(particles[i].x, particles[i].y, map_landmarks.landmark_list[k].x_f, map_landmarks.landmark_list[k].y_f);
+      if(particle_to_landmark_distance <= sensor_range)
+        nearest_landmarks.push_back(map_landmarks.landmark_list[k]);
+    }
 
     for(size_t j = 0; j < observations.size(); j++)
     {
@@ -176,24 +185,17 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       // Find the landmark which is closest to this observation
       double distance = -1;
       Map::single_landmark_s landmark;
-      for(size_t k = 0; k < map_landmarks.landmark_list.size(); k++)
+      for(size_t k = 0; k < nearest_landmarks.size(); k++)
       {
-        // Consider only the landmarks which are located in the range of the sensor from the current particle
-        double particle_to_landmark_distance = dist(particles[i].x, particles[i].y, map_landmarks.landmark_list[k].x_f, map_landmarks.landmark_list[k].y_f);
-        if(particle_to_landmark_distance <= sensor_range)
+        // Calculate distance between current observation and each of the nearest landmarks
+        double distance_k = dist(x_p_m, y_p_m, nearest_landmarks[k].x_f, nearest_landmarks[k].y_f);
+        // Find landmark at the minimal distabnce to the observation
+        if(distance < 0 || distance_k < distance)
         {
-          // Calculate distance between current observation and each landmark
-          double distance_k = dist(x_p_m, y_p_m, map_landmarks.landmark_list[k].x_f, map_landmarks.landmark_list[k].y_f);
-          // Find landmark at the minimal distabnce to the observation
-          if(distance < 0 || distance_k < distance)
-          {
-            distance = distance_k;
-            landmark = map_landmarks.landmark_list[k];
-            //std::cout << "Using landmark #" << k << " x=" << landmark.x_f << " y=" << landmark.y_f << std::endl;
-          }
+          distance = distance_k;
+          landmark = nearest_landmarks[k];
+          //std::cout << "Using landmark #" << k << " x=" << landmark.x_f << " y=" << landmark.y_f << std::endl;
         }
-        //else
-        //  std::cout << "Landmark " << k << "is out of range for particle" << i << std::endl;
       }
 
       double obs_weight = 0;
